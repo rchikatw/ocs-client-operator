@@ -18,8 +18,6 @@ package main
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"os"
 	"strings"
 	"time"
@@ -40,9 +38,8 @@ import (
 )
 
 const (
-	csvPrefix              = "ocs-client-operator"
-	clusterConfigNamespace = "kube-system"
-	clusterConfigName      = "cluster-config-v1"
+	csvPrefix      = "ocs-client-operator"
+	clusterDnsName = "cluster"
 )
 
 func main() {
@@ -125,27 +122,15 @@ func main() {
 		klog.Warningf("Unable to find ocp version with completed update")
 	}
 
-	clusterConfig := &corev1.ConfigMap{}
-	clusterConfig.Name = clusterConfigName
-	clusterConfig.Namespace = clusterConfigNamespace
-
-	if err = cl.Get(ctx, client.ObjectKeyFromObject(clusterConfig), clusterConfig); err != nil {
-		klog.Warningf("Failed to get clusterConfig %q/%q: %v", clusterConfig.Namespace, clusterConfig.Name, err)
+	clusterDns := &configv1.DNS{}
+	clusterDns.Name = clusterDnsName
+	if err = cl.Get(ctx, client.ObjectKeyFromObject(clusterDns), clusterDns); err != nil {
+		klog.Warningf("Failed to get clusterDNS %q: %v", clusterDns.Name, err)
 	}
 
-	clusterMetadataYAML := clusterConfig.Data["install-config"]
-	clusterMetadata := struct {
-		Metadata struct {
-			Name string `yaml:"name"`
-		} `yaml:"metadata"`
-	}{}
-	err = yaml.Unmarshal([]byte(clusterMetadataYAML), &clusterMetadata)
-	if err != nil {
-		klog.Warningf("Fatal error, %v", err)
-	}
 	clusterName := ""
-	if len(clusterMetadata.Metadata.Name) > 0 {
-		clusterName = clusterMetadata.Metadata.Name
+	if len(clusterDns.Spec.BaseDomain) > 0 {
+		clusterName = clusterDns.Spec.BaseDomain
 	}
 
 	providerClient, err := providerclient.NewProviderClient(
