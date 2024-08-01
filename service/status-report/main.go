@@ -117,13 +117,11 @@ func main() {
 		klog.Exitf("Failed to report status of storageClient %v: %v", storageClient.Status.ConsumerID, err)
 	}
 
-	storageClientCopy := &v1alpha1.StorageClient{}
-	storageClient.DeepCopyInto(storageClientCopy)
-	if utils.AddAnnotation(storageClient, utils.DesiredSubscriptionChannelAnnotationKey, statusResponse.DesiredClientOperatorChannel) {
-		// patch is being used here as to not have any conflicts over storageclient cr changes as this annotation value doesn't depend on storageclient spec
-		if err := cl.Patch(ctx, storageClient, client.MergeFrom(storageClientCopy)); err != nil {
-			klog.Exitf("Failed to annotate storageclient %q: %v", storageClient.Name, err)
-		}
+	if statusResponse.DesiredClientOperatorChannel != storageClient.Status.DesiredClientConfigHash {
+		// Trigger reconcile Event to storage client
+		// After ocs-operator code merges proto will get update and i will change the DesiredClientOperatorChannel
+		// ConfigHash which is recieved in status response
+		fmt.Print("need to add logic here to trigger reconcile")
 	}
 
 	if err := updateCSIConfig(ctx, cl, providerClient, storageClient, operatorNamespace); err != nil {

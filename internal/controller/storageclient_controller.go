@@ -218,24 +218,21 @@ func (r *StorageClientReconciler) reconcilePhases() (ctrl.Result, error) {
 			if err := r.reconcileClusterResourceQuota(clusterResourceQuotaSpec); err != nil {
 				return reconcile.Result{}, err
 			}
-		case "CephConnection":
-			if utils.DelegateCSI {
-				cephConnection := &csiopv1a1.CephConnection{}
-				cephConnection.Name = r.storageClient.Name
-				cephConnection.Namespace = r.OperatorNamespace
-				if err := r.createOrUpdate(cephConnection, func() error {
-					if err := r.own(cephConnection); err != nil {
-						return fmt.Errorf("failed to own cephConnection resource: %v", err)
-					}
-					if err := json.Unmarshal(eResource.Data, &cephConnection.Spec); err != nil {
-						return fmt.Errorf("failed to unmarshall cephConnectionSpec: %v", err)
-					}
-					return nil
-				}); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to reconcile cephConnection: %v", err)
+		case "ConfigMap":
+			data := map[string]string{}
+			err := json.Unmarshal(eResource.Data, &data)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to unmarshal ConfigMap data: %v", err)
+			}
+			if eResource.Name == "DesiredClientConfig" {
+				r.storageClient.Status.DesiredClientConfigHash = utils.GetMD5Hash(fmt.Sprintf("%v", data))
+				utils.AddAnnotation(r.storageClient, utils.DesiredSubscriptionChannelAnnotationKey, data["DesiredClientOperatorChannel"])
+				if err := r.update(r.storageClient); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to update StorageClient with DesiredClientOperatorChannel annotation: %v", err)
 				}
 			}
 		}
+
 	}
 
 	if r.storageClient.GetAnnotations()[storageClaimProcessedAnnotationKey] != "true" {
