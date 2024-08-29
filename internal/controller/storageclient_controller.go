@@ -207,6 +207,12 @@ func (r *StorageClientReconciler) reconcilePhases() (ctrl.Result, error) {
 		return res, err
 	}
 
+	// if r.storageClient.Status.ConsumerConfig.Hash != storageClientResponse.DesiredConfigHash {
+	// 	r.Log.Info("Reconciling Ritesh hash part")
+	// 	r.storageClient.Status.ConsumerConfig.Hash = storageClientResponse.DesiredConfigHash
+	// 	r.storageClient.Status.ConsumerConfig.Timestamp = metav1.Now()
+	// }
+
 	for _, eResource := range storageClientResponse.ExternalResource {
 		// Create the received resources, if necessary.
 		switch eResource.Kind {
